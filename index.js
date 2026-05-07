@@ -24,9 +24,9 @@ const mcRoutes = require("./routes/mcRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 
 // ── Middleware ─────────────────────────────────────────────────────────────
+
 app.use(cors({
-    origin:true,
-    credentials:true
+    origin:"*"
 }));
 app.use(cookieParser());
 app.use(express.json());
