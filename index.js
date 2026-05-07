@@ -25,9 +25,17 @@ const notificationRoutes = require("./routes/notificationRoutes");
 
 // ── Middleware ─────────────────────────────────────────────────────────────
 
-app.use(cors({
-    origin:"*"
-}));
+const cors = require("cors");
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://smart-waste-frontend-nine.vercel.app"
+    ],
+    credentials: true,
+  })
+);
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
