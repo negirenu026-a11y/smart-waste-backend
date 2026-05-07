@@ -25,7 +25,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 
 // ── Middleware ─────────────────────────────────────────────────────────────
 
-const cors = require("cors");
+
 
 app.use(
   cors({
