@@ -10,6 +10,10 @@ const authMiddleware = (req, res, next) => {
         token = req.headers.authorization.split(" ")[1];
     }
 
+    // Debug logs for production auth issues
+    console.log("Cookies:", req.cookies);
+    console.log("Auth Header:", req.headers.authorization ? "Present" : "Missing");
+
     if (!token) {
         return res.status(401).json({ success: false, message: "Authentication required. Please log in." });
     }

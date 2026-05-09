@@ -27,12 +27,23 @@ const notificationRoutes = require("./routes/notificationRoutes");
 
 
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://smart-waste-frontend-blush.vercel.app",
+  process.env.FRONTEND_URL // Allow dynamic origin from env
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://smart-waste-frontend-blush.vercel.app"
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith(".vercel.app")) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );

@@ -90,10 +90,11 @@ exports.registerUser = async (req, res) => {
         }
 
         if (!isAdminCreating) {
+            const isProduction = process.env.NODE_ENV === "production";
             res.cookie("access_token", token, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-                sameSite: "Lax",
+                secure: isProduction,
+                sameSite: isProduction ? "None" : "Lax",
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
             });
         }
@@ -149,10 +150,11 @@ exports.loginUser = async (req, res) => {
         const token = generateToken(user);
 
         // Set cookie
+        const isProduction = process.env.NODE_ENV === "production";
         res.cookie("access_token", token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "Lax",
+            secure: isProduction,
+            sameSite: isProduction ? "None" : "Lax",
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
@@ -178,7 +180,12 @@ exports.loginUser = async (req, res) => {
 
 // POST /api/logout
 exports.logoutUser = async (req, res) => {
-    res.clearCookie("access_token");
+    const isProduction = process.env.NODE_ENV === "production";
+    res.clearCookie("access_token", {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "None" : "Lax"
+    });
     res.status(200).json({ success: true, message: "Logged out successfully" });
 };
 
