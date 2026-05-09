@@ -29,7 +29,11 @@ const notificationRoutes = require("./routes/notificationRoutes");
 
 app.use(
   cors({
-    origin:"*"
+    origin: [
+      "http://localhost:5173",
+      "https://smart-waste-frontend-blush.vercel.app"
+    ],
+    credentials: true,
   })
 );
 app.use(cookieParser());
