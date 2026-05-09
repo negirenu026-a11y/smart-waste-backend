@@ -306,6 +306,11 @@ exports.forgotPassword = async (req, res) => {
 
         if (!user) return res.status(404).json({ success: false, message: "User not found with these details." });
 
+        // Prevent admin password reset via OTP
+        if (user.userType === "admin") {
+            return res.status(403).json({ success: false, message: "Admin password reset is not allowed via this method. Please contact the system administrator." });
+        }
+
         // Generate 6-digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
