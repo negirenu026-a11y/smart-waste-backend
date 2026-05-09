@@ -23,7 +23,7 @@ const generateToken = (user) => {
 // POST /api/register
 exports.registerUser = async (req, res) => {
     try {
-        const { name, email, phone, password, userType, state, district, city, area, zone, ward, location } = req.body;
+        const { name, email, password, userType, state, district, city, area, zone, ward, location } = req.body;
 
         // Prevent admin registration via API
         if (userType === "admin") {
@@ -48,7 +48,6 @@ exports.registerUser = async (req, res) => {
         const newUser = new User({
             name,
             email: email.toLowerCase().trim(),
-            phone,
             password: hashedPassword,
             userType,
             state: state || "Himachal Pradesh",
@@ -317,19 +316,32 @@ exports.forgotPassword = async (req, res) => {
         try {
             await sendEmail({
                 email: user.email,
-                subject: "WasteWise Password Reset OTP",
-                message: `Your OTP for password reset is: ${otp}. It is valid for 10 minutes. If you did not request this, please ignore this email.`
+                subject: "WasteWise - Password Reset OTP",
+                message: `Your WasteWise Password Reset OTP is: ${otp}. It is valid for 10 minutes.`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+                        <h2 style="color: #2d6a4f;">Password Reset Request</h2>
+                        <p>You requested to reset your password. Use the OTP below to proceed:</p>
+                        <div style="font-size: 24px; font-weight: bold; color: #2d6a4f; margin: 20px 0; letter-spacing: 5px;">
+                            ${otp}
+                        </div>
+                        <p>This code will expire in 10 minutes.</p>
+                        <p>If you didn't request this, please ignore this email.</p>
+                        <hr style="border: none; border-top: 1px solid #eee;" />
+                        <p style="font-size: 12px; color: #777;">WasteWise Smart Management System</p>
+                    </div>
+                `
             });
 
-            res.status(200).json({ success: true, message: "OTP sent to your registered email." });
-        } catch (mailErr) {
+            res.status(200).json({ success: true, message: "OTP sent to your registered email address." });
+        } catch (emailErr) {
             user.resetPasswordOTP = null;
             user.resetPasswordExpires = null;
             await user.save();
-            console.error("Nodemailer Error Details:", mailErr);
+            console.error("Email Error:", emailErr);
             return res.status(500).json({
                 success: false,
-                message: `Failed to send email: ${mailErr.message}. Please check your email credentials in .env`
+                message: `Failed to send email. Ensure your SendGrid settings are correct.`
             });
         }
     } catch (err) {

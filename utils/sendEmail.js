@@ -1,24 +1,31 @@
-const nodemailer = require("nodemailer");
+const sgMail = require('@sendgrid/mail');
 
 const sendEmail = async (options) => {
-    const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false,        // false = STARTTLS (not SSL)
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    });
+    if (!process.env.SENDGRID_API_KEY) {
+        console.error("SendGrid API Key is missing");
+        throw new Error("Email service is not configured.");
+    }
+    
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-    const mailOptions = {
-        from: `WasteWise <${process.env.EMAIL_USER}>`,
+    const msg = {
         to: options.email,
+        from: process.env.SENDGRID_FROM_EMAIL || "ranunegi407@gmail.com",
         subject: options.subject,
         text: options.message,
+        html: options.html || `<p>${options.message}</p>`,
     };
 
-    await transporter.sendMail(mailOptions);
+    try {
+        await sgMail.send(msg);
+        console.log('Email sent successfully via SendGrid to:', options.email);
+    } catch (error) {
+        console.error('SendGrid Error:', error);
+        if (error.response) {
+            console.error(error.response.body);
+        }
+        throw new Error('Email could not be sent');
+    }
 };
 
 module.exports = sendEmail;
