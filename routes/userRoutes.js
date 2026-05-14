@@ -13,7 +13,7 @@ const feedbackController = require("../controllers/feedbackController");
 const { authMiddleware, requireRole } = require("../middleware/authMiddleware");
 
 // ── Multer: File Upload Config ─────────────────────────────────────────────
-const storage = multer.diskStorage({
+const diskStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, path.join(__dirname, "../uploads"));
     },
@@ -23,22 +23,24 @@ const storage = multer.diskStorage({
     }
 });
 
-// Image Upload
-const upload = multer({
-    storage,
+const imageFileFilter = (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mime = allowed.test(file.mimetype);
+    if (ext && mime) return cb(null, true);
+    cb(new Error("Only image files are allowed."));
+};
+
+// Images: memory → uploaded to ImageKit in controllers
+const uploadImage = multer({
+    storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-    fileFilter: (req, file, cb) => {
-        const allowed = /jpeg|jpg|png|gif|webp/;
-        const ext = allowed.test(path.extname(file.originalname).toLowerCase());
-        const mime = allowed.test(file.mimetype);
-        if (ext && mime) return cb(null, true);
-        cb(new Error("Only image files are allowed."));
-    }
+    fileFilter: imageFileFilter
 });
 
-// PDF Upload
+// PDF Upload (local disk)
 const uploadPDF = multer({
-    storage,
+    storage: diskStorage,
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
     fileFilter: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
@@ -72,7 +74,7 @@ router.get("/cities/:district", areaController.getCitiesByDistrict);
 router.post("/seed/areas", authMiddleware, requireRole("admin"), areaController.seedAreas);
 
 // ── Complaint Routes ────────────────────────────────────────────────────────
-router.post("/complaints", authMiddleware, upload.single("image"), complaintController.createComplaint);
+router.post("/complaints", authMiddleware, uploadImage.single("image"), complaintController.createComplaint);
 router.get("/complaints", authMiddleware, complaintController.getAllComplaints);
 router.patch("/complaints/:id/status", authMiddleware, requireRole("mc", "admin"), complaintController.updateComplaintStatus);
 router.patch("/complaints/:id/feedback", authMiddleware, requireRole("citizen"), complaintController.submitFeedback);
@@ -87,7 +89,7 @@ router.delete("/workers/:id", authMiddleware, requireRole("mc", "admin"), worker
 // ── Task Routes ────────────────────────────────────────────────────────────
 router.get("/tasks", authMiddleware, taskController.getAllTasks);
 router.post("/tasks", authMiddleware, requireRole("mc", "admin"), taskController.createTask);
-router.patch("/tasks/:id", authMiddleware, requireRole("mc", "admin"), upload.single("proof"), taskController.updateTask);
+router.patch("/tasks/:id", authMiddleware, requireRole("mc", "admin"), uploadImage.single("proof"), taskController.updateTask);
 router.delete("/tasks/:id", authMiddleware, requireRole("mc", "admin"), taskController.deleteTask);
 
 // ── Report Routes ──────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+const path = require("path");
 const Task = require("../models/mcDetails/taskModel");
 
 // Get all tasks (Admin/MC)
@@ -86,8 +87,24 @@ exports.updateTask = async (req, res) => {
     try {
         const updateData = { ...req.body };
         if (req.file) {
-            updateData.proofImage = `/uploads/${req.file.filename}`;
-            updateData.status = 'Completed'; // Automatically complete on proof upload if preferred
+            const { uploadBuffer, isConfigured } = require("../utils/imageKit");
+            if (!isConfigured()) {
+                return res.status(503).json({
+                    success: false,
+                    message: "Image upload is not configured on the server."
+                });
+            }
+            try {
+                const safeName = `proof-${Date.now()}-${Math.round(Math.random() * 1e6)}${path.extname(req.file.originalname)}`;
+                updateData.completionProof = await uploadBuffer(req.file.buffer, safeName, "/wastewise/task-proofs");
+            } catch (uploadErr) {
+                console.error("ImageKit upload failed:", uploadErr);
+                return res.status(502).json({
+                    success: false,
+                    message: uploadErr.message || "Failed to upload proof image."
+                });
+            }
+            updateData.status = "Completed";
         }
 
         const task = await Task.findOneAndUpdate(
@@ -102,7 +119,7 @@ exports.updateTask = async (req, res) => {
             const Complaint = require("../models/mcDetails/complaintModel");
             await Complaint.findByIdAndUpdate(task.complaintId, {
                 status: "Resolved",
-                proofImage: task.completionProof || task.workerPhoto,
+                proofImage: task.completionProof || task.proofImage || task.workerPhoto,
                 completionNote: task.completionNote || "Task completed by worker."
             });
 

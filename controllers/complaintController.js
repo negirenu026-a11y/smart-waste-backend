@@ -11,34 +11,53 @@ exports.createComplaint = async (req, res) => {
         // 1. Try to find the area to get specific assigned MC
         let assignedMcId = null;
         const areaDoc = await Area.findOne({ district, city, name: area, isDeleted: false });
-        
+
         if (areaDoc && areaDoc.mcId) {
             assignedMcId = areaDoc.mcId;
         } else {
             // 2. Fallback: Find ANY MC registered for this specific City + District
-            const cityMc = await User.findOne({ 
-                userType: "mc", 
-                city: city, 
-                district: district, 
-                isDeleted: false 
+            const cityMc = await User.findOne({
+                userType: "mc",
+                city: city,
+                district: district,
+                isDeleted: false
             });
-            
+
             if (cityMc) {
                 assignedMcId = cityMc._id;
             }
         }
-        
+
         if (!assignedMcId) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "No Municipal Corporation (MC) found for this city/area. Complaint cannot be filed." 
+            return res.status(400).json({
+                success: false,
+                message: "No Municipal Corporation (MC) found for this city/area. Complaint cannot be filed."
             });
         }
 
         const citizenId = req.user?.id;
         const citizenName = req.user?.name || "";
-        const imageUrl = req.file ? `/uploads/${req.file.filename}` : "";
-        
+        let imageUrl = "";
+        if (req.file) {
+            const { uploadBuffer, isConfigured } = require("../utils/imageKit");
+            if (!isConfigured()) {
+                return res.status(503).json({
+                    success: false,
+                    message: "Image upload is not configured on the server."
+                });
+            }
+            try {
+                const safeName = `${Date.now()}-${Math.round(Math.random() * 1e6)}${path.extname(req.file.originalname)}`;
+                imageUrl = await uploadBuffer(req.file.buffer, safeName, "/wastewise/complaints");
+            } catch (uploadErr) {
+                console.error("ImageKit upload failed:", uploadErr);
+                return res.status(502).json({
+                    success: false,
+                    message: uploadErr.message || "Failed to upload image."
+                });
+            }
+        }
+
         // Smart Priority Logic
         let calculatedPriority = "Medium";
         const combinedText = `${type} ${category} ${description}`.toLowerCase();
@@ -145,7 +164,7 @@ exports.getAllComplaints = async (req, res) => {
 exports.updateComplaintStatus = async (req, res) => {
     try {
         const { status, assignedWorker, mcResponse } = req.body;
-        
+
         const updateData = {};
         if (status) updateData.status = status;
         if (assignedWorker) updateData.assignedWorker = assignedWorker;
@@ -168,7 +187,7 @@ exports.updateComplaintStatus = async (req, res) => {
                 const Notification = require("../models/notificationModel");
                 let title = "Complaint Update";
                 let message = `Your complaint about "${complaint.category}" status is now ${complaint.status}.`;
-                
+
                 if (mcResponse) {
                     title = "MC Response Received";
                     message = `MC replied: "${mcResponse}"`;
